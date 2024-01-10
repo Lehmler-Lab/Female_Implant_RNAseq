@@ -52,17 +52,25 @@ Set your working directory and pull in your reference genome to compare your sam
 
 #***Define the Gene Model***#
 ```{r}
-setwd("P:/OEH/Faculty/hlehmler/research/Lehmler Group-Amanda Bullert/4-OH-PCB52_Implant_Project/RNAseq/Novogene_files/usftp21.novogene.com/01.RawData/fastq_files/") #setting directory
+#setwd("P:/OEH/Faculty/hlehmler/research/Lehmler Group-Amanda Bullert/4-OH-PCB52_Implant_Project/RNAseq/Novogene_files/usftp21.novogene.com/01.RawData/fastq_files/") #setting directory
 
 rn6_ref<-TxDb.Rnorvegicus.UCSC.rn6.refGene
 rn6_ref
+```
+```{r}
+library("GenomicFeatures")
+gtffile <- file.path("P:/OEH/Faculty/hlehmler/research/Lehmler lab/Hui Wang/Implant_Female/RNAseq/usftp21.novogene.com/04.Ref/genome.gtf/genome.gtf")
+
+gtffile
+txdb <- makeTxDbFromGFF(gtffile, format="gtf")
+txdb
 ```
 
 For additional notes reference "https://www.bioconductor.org/help/course-materials/2016/CSAMA/lab-3-rnaseq/rnaseq_gene_CSAMA2016.html"
 
 The following line produces a GRangesList of all the exons grouped by gene (Lawrence et al. 2013). Each element of the list is a GRanges object of the exons for a gene
 ```{r}
-ebg <- exonsBy(rn6_ref, 
+ebg <- exonsBy(txdb, 
                by="gene")
 ebg
 g_ids<-names(ebg)
@@ -73,16 +81,18 @@ Now that our gene model reference is ready we can load in samples and analyze th
 
 #***Samples*** Loading meta data
 ```{r}
-meta_data<- read_xlsx("RNAseq_bamlist_metadata.xlsx") #reading in the sample information
+meta_data<- read.csv("RNAseq_bamlist_metadata_female_implant.csv") #reading in the sample information
 
-filenames <- file.path("P://OEH/Faculty/hlehmler/research/Lehmler Group-Amanda Bullert/4-OH-PCB52_Implant_Project/RNAseq/Novogene_files/usftp21.novogene.com/01.RawData/fastq_files/", meta_data$bam_ID)
+filenames <- file.path("P://OEH/Faculty/hlehmler/research/Lehmler lab/Hui Wang/Implant_Female/RNAseq/usftp21.novogene.com/02.Bam/", meta_data$bam_ID)
+
 file.exists(filenames) #a sanity check to make sure you have files named
 ```
 
 ```{r}
 bamfiles <- BamFileList(filenames, yieldSize = 2000000)
-
-list.files(filenames)
+#seqlevels(ebg) <- gsub("chr","", seqlevels(ebg))
+#seqlevels(ebg) <- gsub("v",".", seqlevels(ebg))
+seqlevels(ebg)
 seqinfo(bamfiles[1])
 ```
 
@@ -92,7 +102,7 @@ se <- summarizeOverlaps(features=ebg, #define the gene reference
                             reads=bamfiles, #samples to be read
                             mode="Union", 
                             singleEnd=FALSE, #False indicates samples are paired-end
-                            ignore.strand=FALSE, #not a strand specific experiment
+                            ignore.strand=TRUE, #not a strand specific experiment
                             BPPARAM= SerialParam(progressbar = TRUE)) #progress bar shown
 se
 head(assay(se)) #access the counts
